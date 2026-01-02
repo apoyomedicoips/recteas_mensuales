@@ -57,12 +57,17 @@ async function fetchJSON(name){
   return await r.json();
 }
 
-async function loadData(){
-  DATA.items = await fetchJSON("items.json");
-  DATA.kpi = await fetchJSON("kpi.json");
-  DATA.series = await fetchJSON("series_day.json");
-  DATA.aggDim = await fetchJSON("agg_dim.json");
+
+
+try{
+  await loadData();
+}catch(err){
+  const box = document.getElementById("dataErrBox");
+  box.classList.remove("d-none");
+  box.textContent = "Error cargando datos (JSON). Verifique que está en GitHub Pages y que existen /data/items.json, /data/kpi.json, /data/series_day.json, /data/agg_dim.json. Detalle: " + String(err);
+  return;
 }
+
 
 function initChoices(){
   ui.choicesItems = new Choices($("#selItems"), { removeItemButton: true, shouldSort: true, placeholder: true });
