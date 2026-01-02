@@ -2,8 +2,8 @@
 
 const AUTH_USERS = [
   {
-    user: "dbmeza",
-    email: "dbmeza@gmail.com",
+    user: "dmeza",
+    email: "dmeza.py@gmail.com",
     pass_sha256: "23b7f5fc18e11d24532077431a43f3996155fc9985e5dc6c8bd6d71801fbbf3e"
   }
 ];
