@@ -1,1 +1,233 @@
+<!-- docs/index.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Tablero de Stock Crítico, Recetas Mensuales</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css">
+
+  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+</head>
+
+<body class="bg-body-tertiary">
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+  <div class="container-fluid">
+    <span class="navbar-brand fw-semibold">Control de Stock Crítico, Medicamentos e Insumos</span>
+    <div class="d-flex align-items-center gap-2">
+      <span id="authUserBadge" class="badge text-bg-light d-none"></span>
+      <button id="btnLogout" class="btn btn-outline-light btn-sm d-none">Cerrar sesión</button>
+    </div>
+  </div>
+</nav>
+
+<main class="container-fluid py-3">
+
+  <div class="row g-3">
+    <div class="col-12 col-xxl-3">
+      <div class="card shadow-sm">
+        <div class="card-header fw-semibold">Filtros</div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label">Rango de fechas</label>
+            <div class="row g-2">
+              <div class="col-6">
+                <input id="dateStart" type="date" class="form-control">
+              </div>
+              <div class="col-6">
+                <input id="dateEnd" type="date" class="form-control">
+              </div>
+            </div>
+            <div class="form-text">El rango opera sobre series diarias generadas desde los parquet.</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Ítems críticos</label>
+            <select id="selItems" class="form-select" multiple></select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Almacén</label>
+            <select id="selAlmacen" class="form-select" multiple></select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Servicio</label>
+            <select id="selServicio" class="form-select" multiple></select>
+          </div>
+
+          <div class="d-grid gap-2">
+            <button id="btnApply" class="btn btn-primary">Aplicar filtros</button>
+            <button id="btnReset" class="btn btn-outline-secondary">Restablecer</button>
+          </div>
+
+          <hr class="my-4">
+
+          <div class="alert alert-warning small mb-0">
+            El “stock actual” se carga manualmente en este navegador y se conserva en localStorage.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-xxl-9">
+      <div class="row g-3">
+        <div class="col-12">
+          <div class="row g-3">
+            <div class="col-12 col-md-3">
+              <div class="card kpi-card shadow-sm">
+                <div class="card-body">
+                  <div class="kpi-title">Total consumido (filtrado)</div>
+                  <div id="kpiTotal" class="kpi-value">0</div>
+                  <div id="kpiTotalSub" class="kpi-sub">Unidades</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-12 col-md-3">
+              <div class="card kpi-card shadow-sm">
+                <div class="card-body">
+                  <div class="kpi-title">Ítems en crítico</div>
+                  <div id="kpiCrit" class="kpi-value">0</div>
+                  <div class="kpi-sub">Días cobertura &lt; umbral</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-12 col-md-3">
+              <div class="card kpi-card shadow-sm">
+                <div class="card-body">
+                  <div class="kpi-title">Ítems en alerta</div>
+                  <div id="kpiWarn" class="kpi-value">0</div>
+                  <div class="kpi-sub">Riesgo de quiebre</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-12 col-md-3">
+              <div class="card kpi-card shadow-sm">
+                <div class="card-body">
+                  <div class="kpi-title">Último día en data</div>
+                  <div id="kpiLastDate" class="kpi-value">,</div>
+                  <div class="kpi-sub">Máxima fecha observada</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12">
+          <div class="card shadow-sm">
+            <div class="card-header fw-semibold">Tendencia temporal (consumo)</div>
+            <div class="card-body">
+              <div id="chartSeries" class="plotly-box"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12 col-xl-6">
+          <div class="card shadow-sm">
+            <div class="card-header fw-semibold">Distribución por almacén</div>
+            <div class="card-body">
+              <div id="chartAlmacen" class="plotly-box"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12 col-xl-6">
+          <div class="card shadow-sm">
+            <div class="card-header fw-semibold">Distribución por servicio</div>
+            <div class="card-body">
+              <div id="chartServicio" class="plotly-box"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12">
+          <div class="card shadow-sm">
+            <div class="card-header fw-semibold d-flex align-items-center justify-content-between flex-wrap gap-2">
+              <span>Tabla operativa, consumo y cobertura</span>
+              <div class="d-flex gap-2">
+                <button id="btnExport" class="btn btn-outline-primary btn-sm">Exportar CSV</button>
+                <button id="btnClearStock" class="btn btn-outline-danger btn-sm">Limpiar stock local</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table id="tblMain" class="table table-sm table-striped align-middle">
+                  <thead>
+                    <tr>
+                      <th>Ítem</th>
+                      <th class="text-end">Total</th>
+                      <th class="text-end">7 días</th>
+                      <th class="text-end">30 días</th>
+                      <th class="text-end">Promedio diario (30d)</th>
+                      <th class="text-end">Stock actual</th>
+                      <th class="text-end">Días cobertura</th>
+                      <th>Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+
+              <div class="small text-muted">
+                Umbrales por defecto: crítico &lt; 7 días, alerta &lt; 14 días. Se ajustan en config.js.
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- Modal Login -->
+<div class="modal fade" id="loginModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content shadow">
+      <div class="modal-header">
+        <h5 class="modal-title fw-semibold">Acceso</h5>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info small">
+          En GitHub Pages el login solo opera como control interno básico, no equivale a seguridad real si el repo es público.
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Usuario</label>
+          <input id="loginUser" class="form-control" autocomplete="username">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Correo</label>
+          <input id="loginEmail" class="form-control" autocomplete="email">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Clave</label>
+          <input id="loginPass" type="password" class="form-control" autocomplete="current-password">
+        </div>
+
+        <div id="loginErr" class="text-danger small d-none">Credenciales inválidas.</div>
+      </div>
+      <div class="modal-footer">
+        <button id="btnLogin" class="btn btn-primary">Ingresar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script src="config.js"></script>
+<script src="auth.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
 
